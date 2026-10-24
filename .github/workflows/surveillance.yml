@@ -1,0 +1,54 @@
+name: Surveillance CÔJEGO
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: surveillance
+  cancel-in-progress: false
+jobs:
+  controle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contrôles
+        id: controle
+        env:
+          STATUT_URL: ${{ secrets.STATUT_URL }}
+        run: python3 controle.py
+        continue-on-error: true
+      - name: Ouvrir ou mettre à jour l'incident
+        if: steps.controle.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          N=$(gh issue list --state open --label incident --json number --jq '.[0].number // empty')
+          if [ -z "$N" ]; then
+            gh label create incident --color B60205 --description "Incident détecté par la surveillance" 2>/dev/null || true
+            gh issue create --title "🔴 Incident CÔJEGO détecté" --label incident --assignee Vaahidra --body "@Vaahidra la surveillance a détecté un problème.\n\n$(cat rapport.md)"
+          else
+            gh issue comment "$N" --body "Toujours en échec :\n\n$(cat rapport.md)"
+          fi
+      - name: Clore l'incident quand tout est rétabli
+        if: steps.controle.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for N in $(gh issue list --state open --label incident --json number --jq '.[].number'); do
+            gh issue comment "$N" --body "🟢 Rétabli.\n\n$(cat rapport.md)"; gh issue close "$N"
+          done
+      - name: Garder le planning actif (GitHub désactive un planning après 60 jours sans activité)
+        if: always()
+        run: |
+          DERNIER=$(git log -1 --format=%ct); NOW=$(date +%s)
+          if [ $(( (NOW - DERNIER) / 86400 )) -ge 30 ]; then
+            git config user.name "surveillance"; git config user.email "surveillance@users.noreply.github.com"
+            git commit --allow-empty -m "Maintien du planning (activité mensuelle)"; git push
+          fi
+      - name: Résultat final
+        if: steps.controle.outcome == 'failure'
+        run: exit 1
