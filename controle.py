@@ -130,6 +130,8 @@ essayer("DNS www.cojego.com", dns_a("www.cojego.com"))
 essayer("DNS du courrier (MX, SPF, DKIM)", dns_mail())
 essayer("Sauvegarde de la base (hors serveur)", sauvegarde())
 
+if os.environ.get('TEST_ECHEC') == '1': resultats.append(('TEST D\'ALERTE (simulation, rien n\'est cassé)', False, 'échec simulé volontairement pour vérifier la chaîne d\'alerte'))
+
 # ----- compte rendu -----
 echecs = [r for r in resultats if not r[1]]
 lignes = [f"{'✅' if ok else '❌'} {n} — {d}" for n, ok, d in resultats]

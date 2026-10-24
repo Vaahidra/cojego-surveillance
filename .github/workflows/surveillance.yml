@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
+    inputs:
+      test_echec:
+        description: "Simuler un échec pour tester l'alerte (1 = oui)"
+        required: false
+        default: "0"
 permissions:
   contents: write
   issues: write
@@ -19,6 +24,7 @@ jobs:
         id: controle
         env:
           STATUT_URL: ${{ secrets.STATUT_URL }}
+          TEST_ECHEC: ${{ github.event.inputs.test_echec }}
         run: python3 controle.py
         continue-on-error: true
       - name: Ouvrir ou mettre à jour l'incident
