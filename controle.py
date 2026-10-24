@@ -95,7 +95,7 @@ def sauvegarde():
 def faux_login():
     def f():
         code, _, _, _ = requete("https://app.cojego.com/api/auth/login", "POST", json.dumps({"identifier": "surveillance@exemple.invalid", "password": "x"}).encode())
-        return code == 401, f"{code} (401 attendu ; 405 = login cassé)"
+        return code in (401, 429), f"{code} (401 attendu ; 429 = limite de tentatives, l'API répond ; 405 ou 5xx = login cassé)"
     return f
 
 def pico():
