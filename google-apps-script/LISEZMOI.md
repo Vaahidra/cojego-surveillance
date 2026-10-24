@@ -8,3 +8,7 @@
 
 C'est tout : contrôle toutes les 10 minutes, mail seulement en cas de panne ou de rétablissement, et un mail quotidien vers 8 h (s'il n'arrive pas, c'est que la surveillance est arrêtée). Pour recevoir les alertes sur téléphone : appli Gmail avec notifications activées pour ces mails.
 Pour arrêter : dans le projet, icône horloge « Déclencheurs » → supprimer.
+
+## Quelle adresse reçoit les mails ?
+Le compte Google connecté dans l'onglet script.google.com. Pour le vérifier : fonction **`monAdresse`** → Exécuter → « Journal d'exécution » en bas : « Les alertes partent vers : … ».
+Pour ajouter d'autres destinataires : dans le code, `const DESTINATAIRES_SUPPLEMENTAIRES = ['contact@cojego.com'];`.

@@ -6,6 +6,9 @@
  * Installation : voir LISEZMOI.md (5 minutes). Le secret STATUT_URL va dans « Propriétés du script », jamais dans le code.
  */
 const IP = '51.68.230.58';
+/** Adresses SUPPLÉMENTAIRES qui reçoivent aussi les alertes (en plus du compte qui a installé le script). Ex. : ['contact@cojego.com']. Laisser vide pour ne pas en ajouter. */
+const DESTINATAIRES_SUPPLEMENTAIRES = [];
+const destinataires = () => [Session.getEffectiveUser().getEmail()].concat(DESTINATAIRES_SUPPLEMENTAIRES).join(',');
 const HTTP = (url, opts) => { const t0 = Date.now(); const r = UrlFetchApp.fetch(url, Object.assign({ muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'cojego-surveillance-google/1.0' } }, opts || {})); return { code: r.getResponseCode(), txt: r.getContentText(), h: r.getHeaders(), ms: Date.now() - t0 }; };
 
 const CONTROLES = [
@@ -35,7 +38,7 @@ function controler() {
   const P = PropertiesService.getScriptProperties(); const res = lancerControles(); const pannes = res.filter(r => !r.ok);
   const avant = P.getProperty('ETAT') || 'OK'; const maintenant = Date.now(); const dernierMail = Number(P.getProperty('DERNIER_MAIL') || 0);
   const ligne = r => `${r.ok ? '✅' : '❌'} ${r.nom} — ${r.detail}`; const corps = res.map(ligne).join('\n');
-  const dest = Session.getEffectiveUser().getEmail();
+  const dest = destinataires();
   if (pannes.length && (avant === 'OK' || maintenant - dernierMail > 6 * 3600 * 1000)) {
     MailApp.sendEmail(dest, `🔴 CÔJEGO : ${pannes.length} problème(s) détecté(s)`, `La surveillance de secours a détecté :\n\n${pannes.map(ligne).join('\n')}\n\nDétail complet :\n${corps}\n\n${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}`);
     P.setProperty('DERNIER_MAIL', String(maintenant));
@@ -46,7 +49,7 @@ function controler() {
 
 function resumeQuotidien() {
   const res = lancerControles(); const pannes = res.filter(r => !r.ok);
-  MailApp.sendEmail(Session.getEffectiveUser().getEmail(), pannes.length ? `🔴 CÔJEGO : ${pannes.length} problème(s) ce matin` : `🟢 CÔJEGO : tout fonctionne (${res.length} contrôles)`, res.map(r => `${r.ok ? '✅' : '❌'} ${r.nom} — ${r.detail}`).join('\n') + '\n\n(Mail quotidien de la surveillance de secours : si tu ne le reçois pas un matin, la surveillance elle-même est arrêtée.)');
+  MailApp.sendEmail(destinataires(), pannes.length ? `🔴 CÔJEGO : ${pannes.length} problème(s) ce matin` : `🟢 CÔJEGO : tout fonctionne (${res.length} contrôles)`, res.map(r => `${r.ok ? '✅' : '❌'} ${r.nom} — ${r.detail}`).join('\n') + '\n\n(Mail quotidien de la surveillance de secours : si tu ne le reçois pas un matin, la surveillance elle-même est arrêtée.)');
 }
 
 /** À lancer UNE SEULE FOIS à la main : crée les déclencheurs (toutes les 10 min + chaque matin vers 8 h). */
@@ -55,3 +58,6 @@ function installerDeclencheurs() {
   ScriptApp.newTrigger('controler').timeBased().everyMinutes(10).create();
   ScriptApp.newTrigger('resumeQuotidien').timeBased().everyDays(1).atHour(8).inTimezone('Europe/Paris').create();
 }
+
+/** Pour savoir à quelle adresse partent les mails : choisir cette fonction, Exécuter, puis ouvrir « Journal d'exécution » (en bas). */
+function monAdresse() { Logger.log('Les alertes partent vers : ' + destinataires()); }
